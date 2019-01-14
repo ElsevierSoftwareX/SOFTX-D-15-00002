@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 
 __author__    = "Ole Weidner"
 __copyright__ = "Copyright 2012-2013, The SAGA Project"
@@ -47,7 +48,7 @@ def main():
         #jd.total_physical_memory = 1024 # Memory requirements in Megabyte
 
         jd.queue             = "development"
-        jd.project           = "TG-MCB090174"
+        jd.project           = "TG-SEE100004"
 
         jd.working_directory = "$SCRATCH/A/B/C"
         jd.output            = "examplejob.out"

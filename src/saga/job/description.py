@@ -10,6 +10,7 @@ import radical.utils.signatures as rus
 
 import saga
 
+
 #-------------------------------------------------------------------------------
 #
 class Description (saga.Attributes) :
@@ -31,9 +32,12 @@ class Description (saga.Attributes) :
         # register properties with the attribute interface
 
         self._attributes_register  (saga.job.EXECUTABLE           , None, sa.STRING, sa.SCALAR, sa.WRITEABLE)
+        self._attributes_register  (saga.job.PRE_EXEC             , None, sa.STRING, sa.VECTOR, sa.WRITEABLE)
+        self._attributes_register  (saga.job.POST_EXEC            , None, sa.STRING, sa.VECTOR, sa.WRITEABLE)
         self._attributes_register  (saga.job.ARGUMENTS            , None, sa.STRING, sa.VECTOR, sa.WRITEABLE)
         self._attributes_register  (saga.job.ENVIRONMENT          , None, sa.STRING, sa.DICT,   sa.WRITEABLE)
         self._attributes_register  (saga.job.TOTAL_CPU_COUNT      , None, sa.INT,    sa.SCALAR, sa.WRITEABLE)
+        self._attributes_register  (saga.job.TOTAL_GPU_COUNT      , None, sa.INT,    sa.SCALAR, sa.WRITEABLE)
         self._attributes_register  (saga.job.NUMBER_OF_PROCESSES  , None, sa.INT,    sa.SCALAR, sa.WRITEABLE)
         self._attributes_register  (saga.job.PROCESSES_PER_HOST   , None, sa.INT,    sa.SCALAR, sa.WRITEABLE)
         self._attributes_register  (saga.job.THREADS_PER_PROCESS  , None, sa.INT,    sa.SCALAR, sa.WRITEABLE)
@@ -51,7 +55,7 @@ class Description (saga.Attributes) :
         self._attributes_register  (saga.job.OPERATING_SYSTEM_TYPE, None, sa.ENUM,   sa.SCALAR, sa.WRITEABLE)
         self._attributes_register  (saga.job.CANDIDATE_HOSTS      , None, sa.STRING, sa.VECTOR, sa.WRITEABLE)
         self._attributes_register  (saga.job.QUEUE                , None, sa.STRING, sa.SCALAR, sa.WRITEABLE)
-        self._attributes_register  (saga.job.NAME                 , None, sa.STRING, sa.SCALAR, sa.WRITEABLE) 
+        self._attributes_register  (saga.job.NAME                 , None, sa.STRING, sa.SCALAR, sa.WRITEABLE)
         self._attributes_register  (saga.job.PROJECT              , None, sa.STRING, sa.SCALAR, sa.WRITEABLE)
         self._attributes_register  (saga.job.JOB_CONTACT          , None, sa.STRING, sa.VECTOR, sa.WRITEABLE)
         self._attributes_register  (saga.job.SPMD_VARIATION       , None, sa.ENUM,   sa.SCALAR, sa.WRITEABLE)
@@ -80,7 +84,6 @@ class Description (saga.Attributes) :
         return env
 
 
-
     # --------------------------------------------------------------------------
     #
     @rus.takes   ('Description',
@@ -90,13 +93,14 @@ class Description (saga.Attributes) :
         other = saga.job.Description ()
         return self.clone (other)
 
+
     # --------------------------------------------------------------------------
     #
     @rus.takes   ('Description',
                   'Description')
     @rus.returns ('Description')
     def clone (self, other=None) :
-        """ 
+        """
         clone()
 
         Implements deep copy. u
@@ -114,6 +118,5 @@ class Description (saga.Attributes) :
         return self._attributes_deep_copy (other)
 
 
-
-
+# ------------------------------------------------------------------------------
 

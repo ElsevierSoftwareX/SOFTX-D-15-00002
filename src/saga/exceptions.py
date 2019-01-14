@@ -12,7 +12,6 @@ import weakref
 import operator
 import traceback
 
-
 # We have the choice of doing signature checks in exceptions, or to raise saga
 # exceptions on signature checks -- we cannot do both.  At this point, we use
 # the saga.exceptions in signatures, thus can *not* have signature checks
@@ -159,6 +158,7 @@ class SagaException (Exception) :
 
         clone = self.__class__ ("")
 
+        clone._parent    = self._parent
         clone._object    = self._object
         clone._message   = self._message
         clone._messages  = self._messages

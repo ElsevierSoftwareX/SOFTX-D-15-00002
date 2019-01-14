@@ -106,6 +106,7 @@ class Job (sb.Base, st.Task, sasync.Async) :
         self._attributes_register   (FINISHED,         None,    sa.INT,    sa.SCALAR, sa.READONLY)
         self._attributes_register   (EXECUTION_HOSTS,  None,    sa.STRING, sa.VECTOR, sa.READONLY)
         self._attributes_register   (ID,               None,    sa.STRING, sa.SCALAR, sa.READONLY)
+        self._attributes_register   (NAME,             None,    sa.STRING, sa.SCALAR, sa.READONLY)
         self._attributes_register   (SERVICE_URL,      None,    sa.URL,    sa.SCALAR, sa.READONLY)
 
         self._attributes_set_enums  (STATE, [UNKNOWN, NEW,     PENDING,  RUNNING,
@@ -113,6 +114,7 @@ class Job (sb.Base, st.Task, sasync.Async) :
 
         self._attributes_set_getter (STATE,           self.get_state)
         self._attributes_set_getter (ID,              self.get_id)
+        self._attributes_set_getter (NAME,            self.get_name)
         self._attributes_set_getter (EXIT_CODE,       self._get_exit_code)
         self._attributes_set_getter (CREATED,         self._get_created)
         self._attributes_set_getter (STARTED,         self._get_started)
@@ -154,6 +156,20 @@ class Job (sb.Base, st.Task, sasync.Async) :
         id = self._adaptor.get_id (ttype=ttype)
         return id
 
+
+    # --------------------------------------------------------------------------
+    #
+    @rus.takes   ('Job',
+                  rus.optional (rus.one_of (SYNC, ASYNC, TASK)))
+    @rus.returns ((rus.nothing, basestring, st.Task))
+    def get_name (self, ttype=None) :
+        """
+        get_name()
+
+        Return the job name. 
+        """
+        name = self._adaptor.get_name(ttype=ttype)
+        return name
 
     # --------------------------------------------------------------------------
     #
@@ -203,9 +219,14 @@ class Job (sb.Base, st.Task, sasync.Async) :
     def get_stdin (self, ttype=None) :
         """
         get_stdin()
+
+        ttype:     saga.task.type enum
+        ret:       string / saga.Task
     
-        Return the job's STDIN handle. 
+        Return the job's STDIN as string. 
         """
+
+        # FIXME: we have no means to set a stdin stream
         return self._adaptor.get_stdin (ttype=ttype)
 
 
@@ -218,7 +239,10 @@ class Job (sb.Base, st.Task, sasync.Async) :
         """
         get_stdout()
 
-        Return the job's STDOUT handle. 
+        ttype:     saga.task.type enum
+        ret:       string / saga.Task
+
+        Return the job's STDOUT as string. 
         """
         return self._adaptor.get_stdout (ttype=ttype)
 
@@ -232,9 +256,15 @@ class Job (sb.Base, st.Task, sasync.Async) :
         """
         get_stdout_string()
 
-        Return the job's STDOUT.
+        Return the job's STDOUT as string.
+
+        ttype:     saga.task.type enum
+        ret:       string / saga.Task
+
+        THIS METHOD IS DEPRECATED AND WILL BE REMOVED IN A FUTURE RELEASE.
+        USE job.get_stdout() INSTEAD.
         """
-        return self._adaptor.get_stdout_string (ttype=ttype)
+        return self.get_stdout (ttype=ttype)
 
 
     # --------------------------------------------------------------------------
@@ -246,10 +276,10 @@ class Job (sb.Base, st.Task, sasync.Async) :
         """
         get_stderr()
 
-        Return the job's STDERR handle.
+        Return the job's STDERR as string.
 
         ttype:     saga.task.type enum
-        ret:       File / saga.Task
+        ret:       string / saga.Task
         """
         return self._adaptor.get_stderr (ttype=ttype)
 
@@ -266,9 +296,33 @@ class Job (sb.Base, st.Task, sasync.Async) :
         Return the job's STDERR.
 
         ttype:     saga.task.type enum
-        ret:       string.
+        ret:       string / saga.Task
+
+        THIS METHOD IS DEPRECATED AND WILL BE REMOVED IN A FUTURE RELEASE.
+        USE job.get_stderr() INSTEAD.
         """
-        return self._adaptor.get_stderr_string (ttype=ttype)
+        return self.get_stderr(ttype=ttype)
+
+
+    # --------------------------------------------------------------------------
+    #
+    @rus.takes     ('Job',
+                    rus.optional (rus.one_of (SYNC, ASYNC, TASK)))
+    @rus.returns   ((str, st.Task))
+    def get_log (self, ttype=None) :
+        """
+        get_log_string()
+
+        Return the job's log information, ie. backend specific log messages
+        which have been collected during the job execution.  Those messages also
+        include stdout/stderr from the job's pre- and post-exec.  The returned
+        string generally contains one log message per line, but the format of
+        the string is ultimately undefined.
+
+        ttype:     saga.task.type enum
+        ret:       string / saga.Task
+        """
+        return self._adaptor.get_log (ttype=ttype)
 
 
     # --------------------------------------------------------------------------
@@ -282,12 +336,17 @@ class Job (sb.Base, st.Task, sasync.Async) :
 
         Return the job's log information, ie. backend specific log messages
         which have been collected during the job execution.  Those messages also
-        include stdout/stderr from the job's pre- and post-exec.
+        include stdout/stderr from the job's pre- and post-exec.  The returned
+        string generally contains one log message per line, but the format of
+        the string is ultimately undefined.
 
         ttype:     saga.task.type enum
-        ret:       string.
+        ret:       string / saga.Task
+
+        THIS METHOD IS DEPRECATED AND WILL BE REMOVED IN A FUTURE RELEASE.
+        USE job.get_log() INSTEAD.
         """
-        return self._adaptor.get_stderr_string (ttype=ttype)
+        return self.get_log (ttype=ttype)
 
 
     # --------------------------------------------------------------------------
@@ -365,11 +424,14 @@ class Job (sb.Base, st.Task, sasync.Async) :
         return self._adaptor.signal (signum, ttype=ttype)
 
 
-    id          = property (get_id)           # string
-    description = property (get_description)  # Description
-    #stdin       = property (get_stdin)        # File
-    stdout      = property (get_stdout)       # File
-    stderr      = property (get_stderr)       # File
+    #-----------------------------------------------------------------
+    #
+    id          = property (get_id)            # string
+    description = property (get_description)   # Description
+   #stdin       = property (get_stdin)         # File
+    stdout      = property (get_stdout_string) # string
+    stderr      = property (get_stderr_string) # string
+    log         = property (get_log)           # string
 
 
     #-----------------------------------------------------------------
@@ -572,7 +634,6 @@ class Job (sb.Base, st.Task, sasync.Async) :
         """
         return self._adaptor.get_result (ttype=ttype)
 
-
     # --------------------------------------------------------------------------
     #
     @rus.takes     ('Job',
@@ -596,8 +657,11 @@ class Job (sb.Base, st.Task, sasync.Async) :
             :note: if job failed, that will get an exception describing 
                    why, if that exists.  Otherwise, the call returns None.
         """
-        # FIXME: add CPI
-        return self._adaptor.get_exception (ttype=ttype)
+        
+        if  self.state == FAILED :
+            return se.NoSuccess ("job stderr: %s" % self.get_stderr_string ())
+        else :
+            return None
 
 
     # --------------------------------------------------------------------------
@@ -610,7 +674,11 @@ class Job (sb.Base, st.Task, sasync.Async) :
             :note: if job failed, that will re-raise an exception describing 
                    why, if that exists.  Otherwise, the call does nothing.
         """
-        self._adaptor.re_raise ()
+
+        if  self.state == FAILED :
+            raise se.NoSuccess ("job stderr: %s" % self.get_stderr_string ())
+        else :
+            return 
 
 
     # ----------------------------------------------------------------
@@ -669,6 +737,7 @@ class Job (sb.Base, st.Task, sasync.Async) :
     def _get_service_url (self, ttype=None) :
         return self._adaptor.get_service_url (ttype=ttype)
 
+    name      = property (get_name)        # job name
     state     = property (get_state)       # state enum
     result    = property (get_result)      # result type    (None)
     object    = property (get_object)      # object type    (job_service)

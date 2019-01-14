@@ -20,6 +20,27 @@ import saga.exceptions      as se
 
 import saga.engine.registry  # adaptors to load
 
+# we set the default of the pty share mode to 'no' on CentOS, as that seems to
+# consistently come with old ssh versions which can't handle sharing for sftp
+# channels.
+_share_mode_default='auto'
+try:
+    import subprocess as sp
+    _p = sp.Popen ('lsb_release -a | grep "Distributor ID" | cut -f 2 -d ":"', 
+                   stdout=sp.PIPE, stderr=sp.STDOUT, shell=True)
+    _os_flavor = _p.communicate()[0].strip().lower()
+
+    if 'centos'  in _os_flavor or \
+       'cent_os' in _os_flavor or \
+       'cent-os' in _os_flavor or \
+       'cent os' in _os_flavor :
+        _share_mode_default='no'
+
+except Exception as e:
+    # we ignore this then -- we are relatively sure that the above should work
+    # on CentOS...
+    pass
+
 
 ############# These are all supported options for saga.engine ####################
 ##
@@ -32,6 +53,14 @@ _config_options = [
     'valid_options' : [True, False],
     'documentation' : 'load adaptors which are marked as beta (i.e. not released).',
     'env_variable'  : None
+    },
+    {
+    'category'      : 'saga.engine',
+    'name'          : 'adaptor_path',
+    'type'          : str,
+    'default'       : '',
+    'documentation' : 'colon separated list of python module pathes to load adaptors from',
+    'env_variable'  : 'SAGA_ADAPTOR_PATH'
     },
     # FIXME: is there a better place to register util level options?
     {
@@ -55,10 +84,19 @@ _config_options = [
     'category'      : 'saga.utils.pty',
     'name'          : 'ssh_share_mode',
     'type'          : str,
-    'default'       : 'auto',
+    'default'       : _share_mode_default,
     'valid_options' : ['auto', 'no'],
-    'documentation' : 'use the specified mode as flag for the ssh ControlMaster option',
+    'documentation' : 'use the specified mode as flag for the ssh ControlMaster '
+                      'option.  Is set to "no" on CentOS.',
     'env_variable'  : 'SAGA_PTY_SSH_SHAREMODE'
+    },
+    {
+    'category'      : 'saga.utils.pty',
+    'name'          : 'ssh_timeout',
+    'type'          : float,
+    'default'       : 10.0,
+    'documentation' : 'connection attempts time out after that many seconds',
+    'env_variable'  : 'SAGA_PTY_SSH_TIMEOUT'
     },
     {
     'category'      : 'saga.utils.pty',
@@ -77,6 +115,7 @@ _config_options = [
     'env_variable'  : 'SAGA_PTY_CONN_POOL_SIZE'
     },
     {
+    # FIXME: should that be the same value as 'ssh_timeout'?
     'category'      : 'saga.utils.pty',
     'name'          : 'connection_pool_wait',
     'type'          : int,
@@ -179,21 +218,16 @@ class Engine(ruc.Configurable):
         # Engine manages cpis from adaptors
         self._adaptor_registry = {}
 
-
         # set the configuration options for this object
         ruc.Configurable.__init__       (self, 'saga')
         ruc.Configurable.config_options (self, 'saga.engine', _config_options)
         self._cfg = self.get_config('saga.engine')
 
-
         # Initialize the logging, and log version (this is a singleton!)
-        self._logger = rul.getLogger ('saga', 'Engine')
-
+        self._logger = ru.Logger('radical.saga')
 
         # load adaptors
         self._load_adaptors ()
-
-
 
 
     #-----------------------------------------------------------------
@@ -209,24 +243,33 @@ class Engine(ruc.Configurable):
         """
 
         # get the engine config options
-        global_config = ruc.getConfig('saga')
-
+        global_config     = ruc.getConfig('saga')
+        engine_config     = global_config.get_category('saga.engine')
+        saga_adaptor_path = engine_config['adaptor_path'].get_value()
 
         # get the list of adaptors to load
         registry = saga.engine.registry.adaptor_registry
+
+        # add the list of modpaths found in the config options
+        for path in saga_adaptor_path.split(':'):
+            if path:
+                self._logger.debug ("adding   adaptor path: '%s'" % path)
+                registry.append(path)
+
+        self._logger.debug ("listing  adaptor registry: %s" % registry)
 
 
         # check if some unit test wants to use a special registry.  If
         # so, we reset cpi infos from the earlier singleton creation.
         if inject_registry != None :
             self._adaptor_registry = {}
-            registry               = inject_registry
+            registry = inject_registry
 
 
         # attempt to load all registered modules
         for module_name in registry:
 
-            self._logger.info ("Loading  adaptor %s"  %  module_name)
+            self._logger.info ("loading  adaptor %s" % module_name)
 
 
             # first, import the module
